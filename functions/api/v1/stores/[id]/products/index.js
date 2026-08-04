@@ -48,27 +48,87 @@ const DEMO_PRODUCTS = {
   ],
 };
 
+import { validateInput } from "../../../../../_middleware.js";
+
+const productSchema = {
+  sku: { required: true, type: "string", minLength: 1, maxLength: 50 },
+  name: { required: true, type: "string", minLength: 1, maxLength: 200 },
+  price: { required: true, type: "number" },
+  currency: { required: true, type: "string", maxLength: 3 },
+};
+
 export async function onRequestGet(context) {
   const { id } = context.params;
 
+  // Sanitize ID
+  const storeId = String(id).replace(/[^a-zA-Z0-9-_]/g, "").slice(0, 50);
+
   // Check demo products first.
-  if (DEMO_PRODUCTS[id]) {
-    return Response.json({ products: DEMO_PRODUCTS[id] });
+  if (DEMO_PRODUCTS[storeId]) {
+    return Response.json({ products: DEMO_PRODUCTS[storeId] });
   }
 
-  const products = await context.env.KV.get(`products:${id}`, "json");
-  return Response.json({ products: products ?? [] });
+  try {
+    const products = await context.env.KV.get(`products:${storeId}`, "json");
+    return Response.json({ products: products ?? [] });
+  } catch {
+    return Response.json({ products: [] });
+  }
 }
 
 export async function onRequestPost(context) {
-  const { id } = context.params;
-  const body = await context.request.json();
+  try {
+    const { id } = context.params;
+    const body = await context.request.json();
 
-  const products = (await context.env.KV.get(`products:${id}`, "json")) ?? [];
-  const idx = products.findIndex((p) => p.sku === body.sku);
-  if (idx >= 0) products[idx] = body;
-  else products.push(body);
+    // Sanitize ID
+    const storeId = String(id).replace(/[^a-zA-Z0-9-_]/g, "").slice(0, 50);
 
-  await context.env.KV.put(`products:${id}`, JSON.stringify(products));
-  return Response.json({ saved: true });
+    // Validate input
+    const validation = validateInput(body, productSchema);
+    if (!validation.valid) {
+      return Response.json({ error: validation.error }, { status: 400 });
+    }
+
+    // Sanitize inputs
+    const product = {
+      sku: String(body.sku).trim().slice(0, 50),
+      name: String(body.name).trim().slice(0, 200),
+      price: Number(body.price) || 0,
+      currency: String(body.currency).slice(0, 3).toUpperCase(),
+      availability: ["InStock", "OutOfStock", "LimitedAvailability"].includes(body.availability)
+        ? body.availability
+        : "InStock",
+      inventoryLevel: Math.max(0, parseInt(body.inventoryLevel) || 0),
+      aisle: body.aisle ? String(body.aisle).slice(0, 50) : undefined,
+      shelf: body.shelf ? String(body.shelf).slice(0, 50) : undefined,
+      coordinates: Array.isArray(body.coordinates) && body.coordinates.length === 3
+        ? body.coordinates.map(Number)
+        : undefined,
+    };
+
+    let products = [];
+    try {
+      products = (await context.env.KV.get(`products:${storeId}`, "json")) ?? [];
+    } catch {
+      // KV unavailable - continue with empty array.
+    }
+
+    const idx = products.findIndex((p) => p.sku === product.sku);
+    if (idx >= 0) products[idx] = product;
+    else products.push(product);
+
+    try {
+      await context.env.KV.put(`products:${storeId}`, JSON.stringify(products));
+    } catch {
+      return Response.json({ saved: false, warning: "Storage limit exceeded" }, { status: 503 });
+    }
+
+    return Response.json({ saved: true });
+  } catch (err) {
+    return Response.json(
+      { error: err instanceof Error ? err.message : "Invalid request" },
+      { status: 400 }
+    );
+  }
 }

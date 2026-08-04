@@ -17,7 +17,7 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-surface text-on-background font-body-md">
+    <main className="relative min-h-screen bg-surface text-on-background font-body-md">
       {/* Ambient Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="blob bg-primary-fixed/30 w-[600px] h-[600px] top-[-200px] left-[-200px]"></div>
@@ -47,7 +47,7 @@ export default function LandingPage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="max-w-container-max mx-auto px-gutter flex flex-col items-center text-center mt-margin-desktop mb-section-gap pt-32">
+      <section className="max-w-container-max mx-auto px-gutter flex flex-col items-center text-center mb-section-gap pt-32">
         <div className={`transition-all duration-1000 ${isVisible ? "translate-y-0 opacity-100" : "translate-y-10 opacity-0"}`}>
           <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full glass-card border-electric-blue/20 mb-8 text-electric-blue text-sm font-semibold">
             <span className="w-2 h-2 rounded-full bg-electric-blue animate-pulse"></span>

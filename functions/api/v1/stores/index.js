@@ -1,3 +1,5 @@
+import { validateInput } from "../../../_middleware.js";
+
 const DEMO_STORES = [
   {
     id: "demo-coffee",
@@ -49,6 +51,11 @@ const DEMO_STORES = [
   },
 ];
 
+const storeSchema = {
+  name: { required: true, type: "string", minLength: 1, maxLength: 100 },
+  ownerId: { required: true, type: "string", minLength: 1, maxLength: 100 },
+};
+
 export async function onRequestGet(context) {
   // Don't use KV for demo data - serve static demo stores.
   // Only use KV for user-created stores.
@@ -66,34 +73,48 @@ export async function onRequestGet(context) {
 }
 
 export async function onRequestPost(context) {
-  const body = await context.request.json();
-  if (!body.name || !body.ownerId) {
-    return Response.json({ error: "name and ownerId are required" }, { status: 400 });
-  }
-
-  let stores = [];
   try {
-    stores = (await context.env.KV.get("stores", "json")) ?? [];
-  } catch {
-    // KV unavailable - continue with empty array.
+    const body = await context.request.json();
+
+    // Validate input
+    const validation = validateInput(body, storeSchema);
+    if (!validation.valid) {
+      return Response.json({ error: validation.error }, { status: 400 });
+    }
+
+    // Sanitize inputs
+    const name = String(body.name).trim().slice(0, 100);
+    const ownerId = String(body.ownerId).trim().slice(0, 100);
+
+    let stores = [];
+    try {
+      stores = (await context.env.KV.get("stores", "json")) ?? [];
+    } catch {
+      // KV unavailable - continue with empty array.
+    }
+
+    const store = {
+      id: `store_${Date.now().toString(36)}`,
+      ownerId,
+      name,
+      plan: "free",
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    stores.push(store);
+
+    try {
+      await context.env.KV.put("stores", JSON.stringify(stores));
+    } catch {
+      // KV limit exceeded - return success but data won't persist.
+      console.warn("KV put failed - store will not persist");
+    }
+
+    return Response.json({ store });
+  } catch (err) {
+    return Response.json(
+      { error: err instanceof Error ? err.message : "Invalid request" },
+      { status: 400 }
+    );
   }
-
-  const store = {
-    id: `store_${Date.now().toString(36)}`,
-    ownerId: body.ownerId,
-    name: body.name,
-    plan: "free",
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-  stores.push(store);
-
-  try {
-    await context.env.KV.put("stores", JSON.stringify(stores));
-  } catch {
-    // KV limit exceeded - return success but data won't persist.
-    console.warn("KV put failed - store will not persist");
-  }
-
-  return Response.json({ store });
 }

@@ -1,3 +1,5 @@
+import { validateInput } from "../../../../../_middleware.js";
+
 const DEMO_SCENES = {
   "demo-coffee": {
     storeId: "demo-coffee",
@@ -43,32 +45,67 @@ const DEMO_SCENES = {
   },
 };
 
+const sceneSchema = {
+  format: { required: true, type: "string", pattern: /^(equirectangular|glb)$/ },
+  assetUrl: { required: true, type: "string", maxLength: 500 },
+};
+
 export async function onRequestGet(context) {
   const { id } = context.params;
 
+  // Sanitize ID
+  const storeId = String(id).replace(/[^a-zA-Z0-9-_]/g, "").slice(0, 50);
+
   // Check demo scenes first.
-  if (DEMO_SCENES[id]) {
-    return Response.json(DEMO_SCENES[id]);
+  if (DEMO_SCENES[storeId]) {
+    return Response.json(DEMO_SCENES[storeId]);
   }
 
-  const scene = await context.env.KV.get(`scene:${id}`, "json");
-  if (!scene) {
+  try {
+    const scene = await context.env.KV.get(`scene:${storeId}`, "json");
+    if (!scene) {
+      return Response.json({ error: "Scene not found" }, { status: 404 });
+    }
+    return Response.json(scene);
+  } catch {
     return Response.json({ error: "Scene not found" }, { status: 404 });
   }
-
-  return Response.json(scene);
 }
 
 export async function onRequestPut(context) {
-  const { id } = context.params;
-  const body = await context.request.json();
+  try {
+    const { id } = context.params;
+    const body = await context.request.json();
 
-  const scene = {
-    storeId: id,
-    ...body,
-    updatedAt: new Date().toISOString(),
-  };
+    // Sanitize ID
+    const storeId = String(id).replace(/[^a-zA-Z0-9-_]/g, "").slice(0, 50);
 
-  await context.env.KV.put(`scene:${id}`, JSON.stringify(scene));
-  return Response.json({ saved: true });
+    // Validate input
+    const validation = validateInput(body, sceneSchema);
+    if (!validation.valid) {
+      return Response.json({ error: validation.error }, { status: 400 });
+    }
+
+    // Sanitize inputs
+    const scene = {
+      storeId,
+      format: String(body.format).slice(0, 20),
+      assetUrl: String(body.assetUrl).slice(0, 500),
+      hotspots: Array.isArray(body.hotspots) ? body.hotspots.slice(0, 100) : [],
+      updatedAt: new Date().toISOString(),
+    };
+
+    try {
+      await context.env.KV.put(`scene:${storeId}`, JSON.stringify(scene));
+    } catch {
+      return Response.json({ saved: false, warning: "Storage limit exceeded" }, { status: 503 });
+    }
+
+    return Response.json({ saved: true });
+  } catch (err) {
+    return Response.json(
+      { error: err instanceof Error ? err.message : "Invalid request" },
+      { status: 400 }
+    );
+  }
 }
