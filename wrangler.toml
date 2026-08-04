@@ -1,0 +1,13 @@
+name = "walk-in"
+pages_build_output_dir = "out"
+compatibility_date = "2025-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[vars]
+NEXT_PUBLIC_APP_NAME = "Walk In"
+NEXT_PUBLIC_APP_URL = "https://walk-in-cfa.pages.dev"
+NODE_ENV = "production"
+
+[[kv_namespaces]]
+binding = "KV"
+id = "8ced6731bcbb4243b99708142836b7a8"

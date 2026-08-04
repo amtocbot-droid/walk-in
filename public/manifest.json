@@ -1,0 +1,31 @@
+{
+  "name": "Walk In — 3D Shopping Experiences",
+  "short_name": "Walk In",
+  "description": "Explore establishments in realistic 3D with realtime stock, prices, and AI guidance.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#0ea5e9",
+  "orientation": "any",
+  "scope": "/",
+  "icons": [
+    { "src": "/icon-192x192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512x512.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Explore Demos",
+      "short_name": "Demos",
+      "description": "Browse demo establishments",
+      "url": "/demo",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Owner Dashboard",
+      "short_name": "Dashboard",
+      "description": "Manage your stores",
+      "url": "/owner",
+      "icons": [{ "src": "/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ]
+}

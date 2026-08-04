@@ -1,0 +1,132 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or to enforce database constraints?
+// Learn more here: https://pris.ly/d/database-constraints
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime @default(now())
+  stores       Store[]
+
+  @@map("users")
+}
+
+model Store {
+  id                   String   @id @default(cuid())
+  ownerId              String
+  owner                User     @relation(fields: [ownerId], references: [id], onDelete: Cascade)
+  name                 String
+  plan                 String   @default("free")
+  stripeCustomerId     String?
+  stripeSubscriptionId String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  apiKeys              ApiKey[]
+  scene                Scene?
+  products             Product[]
+  ads                  Ad[]
+  adMetrics            AdMetric[]
+  telemetryEvents      TelemetryEvent[]
+
+  @@map("stores")
+}
+
+model ApiKey {
+  id         String    @id @default(cuid())
+  storeId    String
+  store      Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  name       String
+  key        String    @unique
+  scopes     String[]
+  createdAt  DateTime  @default(now())
+  lastUsedAt DateTime?
+
+  @@map("api_keys")
+}
+
+model Scene {
+  id        String   @id @default(cuid())
+  storeId   String   @unique
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  format    String
+  assetUrl  String
+  hotspots  Json
+  updatedAt DateTime @updatedAt
+
+  @@map("scenes")
+}
+
+model Product {
+  id             String   @id @default(cuid())
+  storeId        String
+  store          Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  sku            String
+  name           String
+  price          Float
+  currency       String
+  availability   String
+  inventoryLevel Int
+  aisle          String?
+  shelf          String?
+  coordinates    Float[]
+  updatedAt      DateTime @updatedAt
+
+  @@unique([storeId, sku])
+  @@map("products")
+}
+
+model Ad {
+  id          String    @id @default(cuid())
+  storeId     String
+  store       Store     @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  sponsor     String
+  label       String
+  cta         String
+  position    String
+  productSku  String?
+  dailyBudget Float?
+  active      Boolean   @default(true)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@map("ads")
+}
+
+model AdMetric {
+  id          String   @id @default(cuid())
+  storeId     String
+  store       Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  adId        String
+  date        String
+  impressions Int      @default(0)
+  clicks      Int      @default(0)
+
+  @@unique([adId, date])
+  @@map("ad_metrics")
+}
+
+model TelemetryEvent {
+  id        String   @id @default(cuid())
+  storeId   String
+  store     Store    @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  event     String
+  payload   Json?
+  timestamp DateTime
+
+  @@index([storeId, timestamp])
+  @@map("telemetry_events")
+}

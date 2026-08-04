@@ -1,0 +1,63 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://walkin:walkin@postgres:5432/walkin
+      - REDIS_URL=redis://redis:6379
+      - AUTH_SECRET=${AUTH_SECRET}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - OPENAI_API_KEY=${OPENAI_API_KEY:-}
+      - TELEMETRY_PROVIDER=${TELEMETRY_PROVIDER:-console}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
+    volumes:
+      - walkin-data:/app/data
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  worker:
+    build: .
+    command: npx tsx workers/photogrammetry.ts
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://walkin:walkin@postgres:5432/walkin
+      - REDIS_URL=redis://redis:6379
+      - PHOTOGRAMMETRY_BACKEND=${PHOTOGRAMMETRY_BACKEND:-}
+      - PHOTOGRAMMETRY_UPLOAD_URL=${PHOTOGRAMMETRY_UPLOAD_URL:-}
+      - PHOTOGRAMMETRY_API_KEY=${PHOTOGRAMMETRY_API_KEY:-}
+    depends_on:
+      - postgres
+      - redis
+    restart: unless-stopped
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=walkin
+      - POSTGRES_PASSWORD=walkin
+      - POSTGRES_DB=walkin
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - redis-data:/data
+    ports:
+      - "6379:6379"
+    restart: unless-stopped
+
+volumes:
+  walkin-data:
+  postgres-data:
+  redis-data:
