@@ -163,6 +163,25 @@ export default function OwnerDashboard() {
           <p className="text-sm text-slate-500">Build your 3D walk-in experiences</p>
         </div>
         <div className="flex items-center gap-4">
+          {(() => {
+            const currentStore = stores.find((s) => s.id === selectedStoreId);
+            const plan = currentStore?.plan ?? "free";
+            const planInfo = getPlan(plan);
+            return (
+              <div className="flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs">
+                <span className={`w-2 h-2 rounded-full ${
+                  plan === "enterprise" ? "bg-purple-500" :
+                  plan === "pro" ? "bg-sky-500" : "bg-slate-400"
+                }`} />
+                <span className="text-slate-700">{planInfo.name}</span>
+                {plan === "free" && (
+                  <Link href="/pricing" className="text-sky-600 hover:underline ml-1">
+                    Upgrade
+                  </Link>
+                )}
+              </div>
+            );
+          })()}
           {saved && <span className="text-sm text-emerald-600">Saved</span>}
           {selectedStoreId && (
             <Link

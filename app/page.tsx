@@ -17,7 +17,7 @@ export default function LandingPage() {
   };
 
   return (
-    <main className="relative min-h-screen bg-surface text-on-background font-body-md">
+    <main className="relative bg-surface text-on-background font-body-md">
       {/* Ambient Background */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="blob bg-primary-fixed/30 w-[600px] h-[600px] top-[-200px] left-[-200px]"></div>
@@ -196,7 +196,7 @@ export default function LandingPage() {
       </section>
 
       {/* Footer */}
-      <footer className="bg-surface font-label-sm text-label-sm w-full py-stack-lg border-t border-outline-variant/20">
+      <footer className="bg-surface font-label-sm text-label-sm w-full py-stack-lg border-t border-outline-variant/20 mb-[50vh]">
         <div className="flex flex-col md:flex-row justify-between items-center max-w-container-max mx-auto px-gutter gap-stack-md">
           <div className="font-headline-md text-headline-md font-bold text-deep-navy flex items-center gap-2">
             <div className="w-6 h-6 rounded bg-electric-blue flex items-center justify-center">
