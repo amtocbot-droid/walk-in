@@ -6,7 +6,8 @@ export interface Plan {
   maxStores: number;
   maxSkus: number;
   features: string[];
-  stripePriceId?: string;
+  stripePriceIdMonthly?: string;
+  stripePriceIdYearly?: string;
 }
 
 export const PLANS: Plan[] = [
@@ -22,7 +23,7 @@ export const PLANS: Plan[] = [
     id: "pro",
     name: "Pro",
     priceMonthly: 99,
-    priceYearly: 990,
+    priceYearly: 999,
     maxStores: 5,
     maxSkus: 500,
     features: [
@@ -32,12 +33,14 @@ export const PLANS: Plan[] = [
       "Analytics dashboard",
       "Priority support",
     ],
+    stripePriceIdMonthly: process.env.STRIPE_PRICE_PRO_MONTHLY,
+    stripePriceIdYearly: process.env.STRIPE_PRICE_PRO_YEARLY,
   },
   {
     id: "enterprise",
     name: "Enterprise",
     priceMonthly: 499,
-    priceYearly: 4990,
+    priceYearly: 4999,
     maxStores: 999,
     maxSkus: 999999,
     features: [
@@ -47,6 +50,8 @@ export const PLANS: Plan[] = [
       "Dedicated support",
       "SLA",
     ],
+    stripePriceIdMonthly: process.env.STRIPE_PRICE_ENTERPRISE_MONTHLY,
+    stripePriceIdYearly: process.env.STRIPE_PRICE_ENTERPRISE_YEARLY,
   },
 ];
 
@@ -62,4 +67,9 @@ export function canAddProduct(currentSkuCount: number, planId: string): boolean 
 export function canCreateStore(currentStoreCount: number, planId: string): boolean {
   const plan = getPlan(planId);
   return currentStoreCount < plan.maxStores;
+}
+
+export function getStripePriceId(planId: string, billingCycle: "monthly" | "yearly"): string | undefined {
+  const plan = getPlan(planId);
+  return billingCycle === "yearly" ? plan.stripePriceIdYearly : plan.stripePriceIdMonthly;
 }

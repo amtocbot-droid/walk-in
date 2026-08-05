@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { withApiSecurity } from "@/lib/security";
 import { getStripe, isBillingEnabled } from "@/lib/billing/stripe";
-import { getPlan } from "@/lib/billing/plans";
+import { getStripePriceId } from "@/lib/billing/plans";
 import { getStore, updateStore } from "@/lib/db";
 
 const bodySchema = z.object({
@@ -17,7 +17,6 @@ export const POST = withApiSecurity(async (request: NextRequest) => {
   }
 
   const body = bodySchema.parse(await request.json());
-  const plan = getPlan(body.planId);
   const store = await getStore(body.storeId);
 
   if (!store) {
@@ -29,10 +28,10 @@ export const POST = withApiSecurity(async (request: NextRequest) => {
     return NextResponse.json({ error: "Stripe is not configured" }, { status: 503 });
   }
 
-  const priceId = body.billingCycle === "yearly" ? plan.stripePriceId : plan.stripePriceId;
+  const priceId = getStripePriceId(body.planId, body.billingCycle);
   if (!priceId) {
     return NextResponse.json(
-      { error: `Stripe price ID not configured for ${plan.name}` },
+      { error: `Stripe price ID not configured for ${body.planId} ${body.billingCycle}` },
       { status: 500 }
     );
   }
