@@ -26,8 +26,8 @@ export const DEMO_ESTABLISHMENTS: DemoEstablishment[] = [
     name: "Brew & Bean Coffee",
     type: "Coffee Shop",
     description: "Artisan coffee shop with fresh pastries, merchandise, and cozy seating",
-    panoramaUrl: "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/decor_shop.jpg",
-    panoramaAttribution: "Decor Shop interior — Poly Haven / CC0",
+    panoramaUrl: "https://upload.wikimedia.org/wikipedia/commons/3/39/At_the_Fish_Shop_360%C2%B0_%2831216237834%29.jpg",
+    panoramaAttribution: "Fish Shop interior — Wikimedia Commons / CC BY-SA 4.0",
     products: [
       {
         sku: "coffee_001",
@@ -178,8 +178,8 @@ export const DEMO_ESTABLISHMENTS: DemoEstablishment[] = [
     name: "The Reading Nook",
     type: "Home Library",
     description: "Cozy home library with curated books, comfortable seating, and warm lighting",
-    panoramaUrl: "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/decor_shop.jpg",
-    panoramaAttribution: "Decor Shop interior — Poly Haven / CC0",
+    panoramaUrl: "https://upload.wikimedia.org/wikipedia/commons/d/d4/Cerro_Tololo_Hotel_Interior_360_Panorama_%282022_04_08_Pano360_Tololo_Hotel_Room-CC%29.jpg",
+    panoramaAttribution: "Hotel Room interior — Wikimedia Commons / CC BY-SA 4.0",
     products: [
       {
         sku: "home_001",
@@ -319,8 +319,8 @@ export const DEMO_ESTABLISHMENTS: DemoEstablishment[] = [
     name: "Bright Smile Dental",
     type: "Dentist Office",
     description: "Modern dental practice with comfortable waiting area and state-of-the-art equipment",
-    panoramaUrl: "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/decor_shop.jpg",
-    panoramaAttribution: "Decor Shop interior — Poly Haven / CC0",
+    panoramaUrl: "https://upload.wikimedia.org/wikipedia/commons/b/be/Biblioteca_P%C3%BAblica_de_%C3%89vora_-_Sala_de_exposi%C3%A7%C3%B5es_%28360_panorama%29.jpg",
+    panoramaAttribution: "Évora Library — Wikimedia Commons / CC BY-SA 4.0",
     products: [
       {
         sku: "dental_001",

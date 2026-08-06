@@ -1,10 +1,8 @@
-import { validateInput } from "../../../../../_middleware.js";
-
 const DEMO_SCENES = {
   "demo-coffee": {
     storeId: "demo-coffee",
     format: "equirectangular",
-    assetUrl: "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/decor_shop.jpg",
+    assetUrl: "https://upload.wikimedia.org/wikipedia/commons/3/39/At_the_Fish_Shop_360%C2%B0_%2831216237834%29.jpg",
     hotspots: [],
     updatedAt: new Date().toISOString(),
   },
@@ -18,7 +16,7 @@ const DEMO_SCENES = {
   "demo-home-library": {
     storeId: "demo-home-library",
     format: "equirectangular",
-    assetUrl: "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/decor_shop.jpg",
+    assetUrl: "https://upload.wikimedia.org/wikipedia/commons/d/d4/Cerro_Tololo_Hotel_Interior_360_Panorama_%282022_04_08_Pano360_Tololo_Hotel_Room-CC%29.jpg",
     hotspots: [],
     updatedAt: new Date().toISOString(),
   },
@@ -32,7 +30,7 @@ const DEMO_SCENES = {
   "demo-dentist": {
     storeId: "demo-dentist",
     format: "equirectangular",
-    assetUrl: "https://dl.polyhaven.org/file/ph-assets/HDRIs/extra/Tonemapped%20JPG/decor_shop.jpg",
+    assetUrl: "https://upload.wikimedia.org/wikipedia/commons/b/be/Biblioteca_P%C3%BAblica_de_%C3%89vora_-_Sala_de_exposi%C3%A7%C3%B5es_%28360_panorama%29.jpg",
     hotspots: [],
     updatedAt: new Date().toISOString(),
   },
@@ -45,67 +43,32 @@ const DEMO_SCENES = {
   },
 };
 
-const sceneSchema = {
-  format: { required: true, type: "string", pattern: /^(equirectangular|glb)$/ },
-  assetUrl: { required: true, type: "string", maxLength: 500 },
-};
-
 export async function onRequestGet(context) {
   const { id } = context.params;
 
-  // Sanitize ID
-  const storeId = String(id).replace(/[^a-zA-Z0-9-_]/g, "").slice(0, 50);
-
   // Check demo scenes first.
-  if (DEMO_SCENES[storeId]) {
-    return Response.json(DEMO_SCENES[storeId]);
+  if (DEMO_SCENES[id]) {
+    return Response.json(DEMO_SCENES[id]);
   }
 
-  try {
-    const scene = await context.env.KV.get(`scene:${storeId}`, "json");
-    if (!scene) {
-      return Response.json({ error: "Scene not found" }, { status: 404 });
-    }
-    return Response.json(scene);
-  } catch {
+  const scene = await context.env.KV.get(`scene:${id}`, "json");
+  if (!scene) {
     return Response.json({ error: "Scene not found" }, { status: 404 });
   }
+
+  return Response.json(scene);
 }
 
 export async function onRequestPut(context) {
-  try {
-    const { id } = context.params;
-    const body = await context.request.json();
+  const { id } = context.params;
+  const body = await context.request.json();
 
-    // Sanitize ID
-    const storeId = String(id).replace(/[^a-zA-Z0-9-_]/g, "").slice(0, 50);
+  const scene = {
+    storeId: id,
+    ...body,
+    updatedAt: new Date().toISOString(),
+  };
 
-    // Validate input
-    const validation = validateInput(body, sceneSchema);
-    if (!validation.valid) {
-      return Response.json({ error: validation.error }, { status: 400 });
-    }
-
-    // Sanitize inputs
-    const scene = {
-      storeId,
-      format: String(body.format).slice(0, 20),
-      assetUrl: String(body.assetUrl).slice(0, 500),
-      hotspots: Array.isArray(body.hotspots) ? body.hotspots.slice(0, 100) : [],
-      updatedAt: new Date().toISOString(),
-    };
-
-    try {
-      await context.env.KV.put(`scene:${storeId}`, JSON.stringify(scene));
-    } catch {
-      return Response.json({ saved: false, warning: "Storage limit exceeded" }, { status: 503 });
-    }
-
-    return Response.json({ saved: true });
-  } catch (err) {
-    return Response.json(
-      { error: err instanceof Error ? err.message : "Invalid request" },
-      { status: 400 }
-    );
-  }
+  await context.env.KV.put(`scene:${id}`, JSON.stringify(scene));
+  return Response.json({ saved: true });
 }
