@@ -1,5 +1,13 @@
 import { GuideRequest, GuideResponse, AiProvider, GuideStreamChunk } from "./types";
 
+const STOPWORDS = new Set([
+  "where", "can", "find", "the", "an", "is", "are", "do", "you", "have",
+  "any", "for", "to", "in", "on", "at", "of", "me", "my", "we", "get",
+  "buy", "please", "some", "what", "which", "how", "much", "does", "it",
+  "this", "that", "and", "or", "there", "here", "looking", "look",
+  "need", "want", "got", "if",
+]);
+
 export class LocalResolver implements AiProvider {
   readonly name = "local";
 
@@ -23,12 +31,22 @@ export class LocalResolver implements AiProvider {
     const { query, products } = request;
     const q = query.toLowerCase();
 
-    const match = products.find(
-      (p) =>
-        p.name.toLowerCase().includes(q) ||
-        p.aisle?.toLowerCase().includes(q) ||
-        p.shelf?.toLowerCase().includes(q)
-    );
+    // Tokenize the query and drop filler words so natural-language questions
+    // ("where can I find coffee?") still match product names.
+    const tokens = q
+      .split(/[^a-z0-9]+/)
+      .filter((t) => t.length > 1 && !STOPWORDS.has(t));
+
+    let match: GuideRequest["products"][number] | undefined;
+    let bestScore = 0;
+    for (const p of products) {
+      const hay = `${p.name} ${p.aisle ?? ""} ${p.shelf ?? ""}`.toLowerCase();
+      const score = tokens.filter((t) => hay.includes(t)).length;
+      if (score > bestScore) {
+        bestScore = score;
+        match = p;
+      }
+    }
 
     if (!match) {
       const answer =

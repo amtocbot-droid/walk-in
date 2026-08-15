@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { guideShopper, guideShopperStream } from "@/lib/ai";
 import { fetchProducts } from "@/lib/inventory";
-import { withStoreApiSecurity } from "@/lib/security";
+import { withPublicApiSecurity } from "@/lib/security";
 
 const paramsSchema = z.object({ id: z.string() });
 
@@ -13,7 +13,7 @@ const bodySchema = z.object({
   stream: z.boolean().optional().default(false),
 });
 
-export const POST = withStoreApiSecurity(async (
+export const POST = withPublicApiSecurity(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
