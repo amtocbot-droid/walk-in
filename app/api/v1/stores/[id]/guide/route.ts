@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { guideShopper, guideShopperStream } from "@/lib/ai";
+import { getProducts } from "@/lib/db";
 import { fetchProducts } from "@/lib/inventory";
-import { withStoreApiSecurity } from "@/lib/security";
+import { withPublicApiSecurity } from "@/lib/security";
 
 const paramsSchema = z.object({ id: z.string() });
 
@@ -13,13 +14,16 @@ const bodySchema = z.object({
   stream: z.boolean().optional().default(false),
 });
 
-export const POST = withStoreApiSecurity(async (
+export const POST = withPublicApiSecurity(async (
   request: NextRequest,
   { params }: { params: Promise<{ id: string }> }
 ) => {
   const { id } = paramsSchema.parse(await params);
   const body = bodySchema.parse(await request.json());
-  const products = await fetchProducts(id);
+
+  // Prefer the store's real inventory; fall back to the demo catalog.
+  const stored = await getProducts(id).catch(() => []);
+  const products = stored.length > 0 ? stored : await fetchProducts(id);
 
   if (!body.stream) {
     const result = await guideShopper({

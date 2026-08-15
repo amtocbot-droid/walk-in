@@ -7,7 +7,9 @@ import ShopperExperience from "@/components/shopper/ShopperExperience";
 function StoreContent() {
   const searchParams = useSearchParams();
   const storeId = searchParams.get("id") ?? "demo-store";
-  return <ShopperExperience storeId={storeId} publicMode={true} />;
+  // ?preview=1 loads the owner's localStorage scene instead of the public API.
+  const preview = searchParams.get("preview") === "1";
+  return <ShopperExperience storeId={storeId} publicMode={!preview} />;
 }
 
 export default function StorePage() {

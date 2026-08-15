@@ -77,10 +77,19 @@ export default function OwnerDashboard() {
     );
   }
 
-  if (!userId || !config) {
+  if (!userId) {
     return (
       <div className="flex h-screen items-center justify-center bg-slate-950 text-white">
         Please sign in to access the owner dashboard.
+      </div>
+    );
+  }
+
+  // A store is selected but its scene config hasn't loaded into state yet.
+  if (selectedStoreId && !config) {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-950 text-white">
+        Loading…
       </div>
     );
   }
@@ -140,7 +149,7 @@ export default function OwnerDashboard() {
       return;
     }
 
-    const store = createStore(userId, newStoreName.trim());
+    const store = createStore(userId, newStoreName.trim(), session?.user?.email ?? undefined);
     setStores(loadStores(userId));
     setSelectedStoreId(store.id);
     setNewStoreName("");
@@ -185,7 +194,7 @@ export default function OwnerDashboard() {
           {saved && <span className="text-sm text-emerald-600">Saved</span>}
           {selectedStoreId && (
             <Link
-              href={`/store?id=${selectedStoreId}`}
+              href={`/store?id=${selectedStoreId}&preview=1`}
               className="rounded-full bg-sky-500 px-4 py-2 text-sm font-medium text-white hover:bg-sky-600"
             >
               Preview Store
@@ -243,7 +252,7 @@ export default function OwnerDashboard() {
         </div>
       </div>
 
-      {selectedStoreId ? (
+      {selectedStoreId && config ? (
         <div className="flex flex-1 overflow-hidden">
           <section className="flex flex-1 flex-col border-r border-white/10">
             <div className="border-b border-white/10 p-4">

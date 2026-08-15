@@ -1,8 +1,90 @@
 # Deployment Guide
 
-This guide covers deploying Walk In to AWS ECS with Cloudflare DNS/CDN.
+This guide covers deploying Walk In as a Docker container (the SEOlith LLC standard) and to AWS ECS with Cloudflare DNS/CDN.
 
-## Architecture
+## Docker (SEOlith Standard)
+
+The app ships as a multi-stage `Dockerfile` with three runnable targets:
+
+| Target | Purpose | Compose service |
+|--------|---------|-----------------|
+| `runner` | Hardened distroless Next.js standalone server | `app` |
+| `migrator` | One-shot `prisma migrate deploy` | `migrate` |
+| `worker` | Photogrammetry background worker | `worker` |
+
+The default `next.config.js` builds `output: "standalone"` for containers.
+Cloudflare Pages uses `next.config.cloudflare.js` via `npm run build:cloudflare` instead.
+
+### Local / single-host deployment
+
+```bash
+# .env must define at least AUTH_SECRET (openssl rand -base64 32)
+docker compose up --build -d
+```
+
+Startup order: `postgres` (health-gated) → `migrate` (applies `prisma/migrations`) → `app` + `worker`.
+
+### Production hardening profile
+
+```bash
+docker compose -f docker-compose.prod.yml up --build -d
+```
+
+The prod profile runs the container read-only, drops all capabilities, sets
+`no-new-privileges`, and expects external `DATABASE_URL` / `REDIS_URL`
+(managed Postgres/Redis). Run migrations once per release:
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm \
+  -e DATABASE_URL=postgresql://user:pass@host:5432/walkin \
+  --build migrate
+```
+
+### Health check
+
+`GET /api/health` returns `{ "status": "ok", ... }` and is wired into both the
+image `HEALTHCHECK` and the prod compose healthcheck.
+
+## EC2 + docker compose (current production path)
+
+Single-host deployment driven by CI/CD (`.github/workflows/deploy-ec2.yml`):
+push to `main` → typecheck/lint/build → images pushed to ECR
+(`walk-in` and `walk-in-migrator`) → SSH to the host → `docker compose pull && up -d`.
+
+### One-time host provisioning
+
+1. Launch an EC2 instance (Amazon Linux 2023, `t3.small` or larger) with
+   `deploy/ec2-user-data.sh` as user-data. Security group: 22 (your IP / CI),
+   80/443 (Cloudflare or public).
+2. Attach an Elastic IP so the DNS target is stable.
+3. Put runtime secrets in `/opt/walk-in/.env` on the host:
+   `AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`, `POSTGRES_PASSWORD`,
+   plus `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `OPENAI_API_KEY` as needed.
+4. The host needs ECR pull access — either an instance role with
+   `AmazonEC2ContainerRegistryReadOnly` or IAM credentials in the deploy step.
+
+### GitHub secrets required
+
+| Secret | Description |
+|--------|-------------|
+| `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` | CI credentials with ECR push |
+| `ECR_REGISTRY` | e.g. `123456789012.dkr.ecr.us-east-1.amazonaws.com` |
+| `EC2_HOST` | Elastic IP or hostname |
+| `EC2_SSH_KEY` | Private key for `ec2-user` |
+
+### Manual deploy / rollback
+
+```bash
+ssh ec2-user@<EC2_HOST>
+cd /opt/walk-in
+export ECR_REGISTRY=<registry> IMAGE_TAG=<git-sha>   # pick a previous sha to roll back
+docker compose -f docker-compose.ec2.yml pull
+docker compose -f docker-compose.ec2.yml up -d
+```
+
+Every push is tagged with its git SHA in ECR, so rollback is redeploying an older tag.
+
+## AWS ECS Architecture
 
 - **Frontend + API**: AWS ECS Fargate (Docker container)
 - **Database**: AWS RDS PostgreSQL

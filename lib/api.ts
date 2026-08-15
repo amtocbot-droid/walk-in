@@ -20,7 +20,7 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 export const api = {
   stores: {
     list: () => request<{ stores: Array<{ id: string; name: string; url: string; plan: string }> }>("/stores"),
-    create: (data: { name: string; ownerId: string }) =>
+    create: (data: { id?: string; name: string; ownerId: string; ownerEmail?: string }) =>
       request<{ store: unknown }>("/stores", { method: "POST", body: JSON.stringify(data) }),
   },
   scene: {

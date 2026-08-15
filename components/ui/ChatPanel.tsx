@@ -15,9 +15,11 @@ interface Message {
 export default function ChatPanel({
   onClose,
   initialQuery,
+  storeId = "demo-store",
 }: {
   onClose: () => void;
   initialQuery?: string;
+  storeId?: string;
 }) {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -32,8 +34,8 @@ export default function ChatPanel({
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    fetchProducts("demo-store").then(setProducts);
-  }, []);
+    fetchProducts(storeId).then(setProducts);
+  }, [storeId]);
 
   useEffect(() => {
     if (initialQuery) {
@@ -54,7 +56,7 @@ export default function ChatPanel({
     trackEvent("chat.message", { text });
 
     try {
-      const res = await fetch("/api/v1/stores/demo-store/guide", {
+      const res = await fetch(`/api/v1/stores/${storeId}/guide`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

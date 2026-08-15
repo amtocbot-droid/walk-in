@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { withApiSecurity } from "@/lib/security";
+import { withPublicApiSecurity } from "@/lib/security";
 import { createTelemetryProvider } from "@/lib/telemetry/providers";
 import { appendTelemetryEvents } from "@/lib/db";
 
@@ -14,7 +14,7 @@ const bodySchema = z.object({
   events: z.array(eventSchema).min(1).max(100),
 });
 
-export const POST = withApiSecurity(async (request: NextRequest) => {
+export const POST = withPublicApiSecurity(async (request: NextRequest) => {
   const body = bodySchema.parse(await request.json());
   const provider = createTelemetryProvider();
 

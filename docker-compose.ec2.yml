@@ -1,17 +1,18 @@
+# EC2 pull-based deployment — images come from ECR, no local build.
+# Usage: docker compose -f docker-compose.ec2.yml up -d
+# Requires: ECR_REGISTRY (e.g. 123456789012.dkr.ecr.us-east-1.amazonaws.com)
 services:
   app:
-    build:
-      context: .
-      target: runner
+    image: ${ECR_REGISTRY}/walk-in:${IMAGE_TAG:-latest}
     ports:
       - "3000:3000"
     environment:
       - NODE_ENV=production
-      - DATABASE_URL=postgresql://walkin:walkin@postgres:5432/walkin
+      - DATABASE_URL=postgresql://walkin:${POSTGRES_PASSWORD:-walkin}@postgres:5432/walkin
       - REDIS_URL=redis://redis:6379
       - AUTH_SECRET=${AUTH_SECRET}
       - AUTH_TRUST_HOST=true
-      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL:-http://localhost:3000}
+      - NEXT_PUBLIC_APP_URL=${NEXT_PUBLIC_APP_URL}
       - OPENAI_API_KEY=${OPENAI_API_KEY:-}
       - TELEMETRY_PROVIDER=${TELEMETRY_PROVIDER:-console}
       - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY:-}
@@ -24,45 +25,27 @@ services:
       redis:
         condition: service_started
     restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
 
   migrate:
-    build:
-      context: .
-      target: migrator
+    image: ${ECR_REGISTRY}/walk-in-migrator:${IMAGE_TAG:-latest}
     environment:
-      - DATABASE_URL=postgresql://walkin:walkin@postgres:5432/walkin
+      - DATABASE_URL=postgresql://walkin:${POSTGRES_PASSWORD:-walkin}@postgres:5432/walkin
     depends_on:
       postgres:
         condition: service_healthy
-
-  worker:
-    build:
-      context: .
-      target: worker
-    environment:
-      - NODE_ENV=production
-      - DATABASE_URL=postgresql://walkin:walkin@postgres:5432/walkin
-      - REDIS_URL=redis://redis:6379
-      - PHOTOGRAMMETRY_BACKEND=${PHOTOGRAMMETRY_BACKEND:-}
-      - PHOTOGRAMMETRY_UPLOAD_URL=${PHOTOGRAMMETRY_UPLOAD_URL:-}
-      - PHOTOGRAMMETRY_API_KEY=${PHOTOGRAMMETRY_API_KEY:-}
-    depends_on:
-      migrate:
-        condition: service_completed_successfully
-      redis:
-        condition: service_started
-    restart: unless-stopped
 
   postgres:
     image: postgres:16-alpine
     environment:
       - POSTGRES_USER=walkin
-      - POSTGRES_PASSWORD=walkin
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-walkin}
       - POSTGRES_DB=walkin
     volumes:
       - postgres-data:/var/lib/postgresql/data
-    ports:
-      - "5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U walkin"]
       interval: 5s
@@ -74,8 +57,6 @@ services:
     image: redis:7-alpine
     volumes:
       - redis-data:/data
-    ports:
-      - "6379:6379"
     restart: unless-stopped
 
 volumes:

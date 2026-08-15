@@ -157,7 +157,7 @@ export default function ShopperExperience({
         <SearchPanel onClose={() => setPanel("none")} storeId={storeId} demoMode={demoMode} />
       )}
       {panel === "chat" && (
-        <ChatPanel onClose={() => setPanel("none")} initialQuery={voiceQuery} />
+        <ChatPanel onClose={() => setPanel("none")} initialQuery={voiceQuery} storeId={storeId} />
       )}
       {panel === "list" && (
         <ShoppingListPanel onClose={() => setPanel("none")} />

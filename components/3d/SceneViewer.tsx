@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { useWalkInStore, Hotspot as HotspotType } from "@/lib/store";
-import { fetchProducts } from "@/lib/inventory";
 import { trackEvent } from "@/lib/telemetry";
 import { ASSETS } from "@/lib/config";
 import { loadOwnerScene } from "@/lib/scene-config";
@@ -84,10 +83,9 @@ export default function SceneViewer({ storeId, publicMode = false, demoMode = fa
           console.error("Failed to load public products:", err);
         }
       } else {
-        // Owner preview: load from localStorage and inventory mock.
+        // Owner preview: load the scene the owner saved to localStorage.
         const owner = userId ? loadOwnerScene(userId, storeId) : null;
-        const products = await fetchProducts(storeId, userId);
-        hotspots = products
+        hotspots = (owner?.products ?? [])
           .filter((p) => p.coordinates)
           .map((p, i) => ({
             id: `hp_${i}`,
