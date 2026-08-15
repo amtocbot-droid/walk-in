@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { guideShopper, guideShopperStream } from "@/lib/ai";
+import { getProducts } from "@/lib/db";
 import { fetchProducts } from "@/lib/inventory";
 import { withPublicApiSecurity } from "@/lib/security";
 
@@ -19,7 +20,10 @@ export const POST = withPublicApiSecurity(async (
 ) => {
   const { id } = paramsSchema.parse(await params);
   const body = bodySchema.parse(await request.json());
-  const products = await fetchProducts(id);
+
+  // Prefer the store's real inventory; fall back to the demo catalog.
+  const stored = await getProducts(id).catch(() => []);
+  const products = stored.length > 0 ? stored : await fetchProducts(id);
 
   if (!body.stream) {
     const result = await guideShopper({

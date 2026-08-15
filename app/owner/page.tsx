@@ -149,7 +149,7 @@ export default function OwnerDashboard() {
       return;
     }
 
-    const store = createStore(userId, newStoreName.trim());
+    const store = createStore(userId, newStoreName.trim(), session?.user?.email ?? undefined);
     setStores(loadStores(userId));
     setSelectedStoreId(store.id);
     setNewStoreName("");

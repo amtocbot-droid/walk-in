@@ -28,7 +28,7 @@ export function saveStores(ownerId: string, stores: Store[]): void {
   localStorage.setItem(storageKey(ownerId), JSON.stringify(stores));
 }
 
-export function createStore(ownerId: string, name: string): Store {
+export function createStore(ownerId: string, name: string, ownerEmail?: string): Store {
   const store: Store = {
     id: `store_${Date.now().toString(36)}`,
     ownerId,
@@ -40,7 +40,7 @@ export function createStore(ownerId: string, name: string): Store {
   stores.push(store);
   saveStores(ownerId, stores);
 
-  void api.stores.create({ name, ownerId }).catch((err) => console.error("Store sync failed:", err));
+  void api.stores.create({ id: store.id, name, ownerId, ownerEmail }).catch((err) => console.error("Store sync failed:", err));
 
   return store;
 }

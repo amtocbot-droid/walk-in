@@ -66,9 +66,21 @@ export async function listStores(ownerId?: string): Promise<StoredStore[]> {
   return stores.map(toStoredStore);
 }
 
-export async function createStore(input: { ownerId: string; name: string }): Promise<StoredStore> {
+export async function createStore(input: { id?: string; ownerId: string; ownerEmail?: string; name: string }): Promise<StoredStore> {
+  // Owners are provisioned in the file-based auth store, so make sure a
+  // matching User row exists before the FK on Store.ownerId bites.
+  await prisma.user.upsert({
+    where: { id: input.ownerId },
+    create: {
+      id: input.ownerId,
+      email: input.ownerEmail ?? `${input.ownerId}@local`,
+      passwordHash: "",
+    },
+    update: {},
+  });
   const store = await prisma.store.create({
     data: {
+      ...(input.id ? { id: input.id } : {}),
       ownerId: input.ownerId,
       name: input.name,
       plan: "free",
@@ -349,8 +361,19 @@ export async function trackAdMetric(
 export async function appendTelemetryEvents(
   events: Omit<StoredTelemetryEvent, "id">[]
 ): Promise<void> {
+  // Only persist events for stores that actually exist — public ingest can
+  // carry arbitrary storeIds and the FK constraint would reject the batch.
+  const storeIds = [...new Set(events.map((e) => e.storeId))];
+  const existing = await prisma.store.findMany({
+    where: { id: { in: storeIds } },
+    select: { id: true },
+  });
+  const validIds = new Set(existing.map((s) => s.id));
+  const valid = events.filter((e) => validIds.has(e.storeId));
+  if (valid.length === 0) return;
+
   await prisma.telemetryEvent.createMany({
-    data: events.map((e) => ({
+    data: valid.map((e) => ({
       storeId: e.storeId,
       event: e.event,
       payload: (e.payload ?? {}) as Record<string, never>,

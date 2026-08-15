@@ -70,6 +70,16 @@ export function requireApiKey(request: NextRequest): { ok: boolean; response?: N
   return { ok: true };
 }
 
+// Accepts either an owner session cookie (dashboard) or a Bearer API key
+// (robots / integrations). Used for endpoints that create resources.
+export function requireSessionOrApiKey(request: NextRequest): { ok: boolean; response?: NextResponse } {
+  const sessionCookie = request.cookies.get("authjs.session-token")?.value;
+  if (sessionCookie) {
+    return { ok: true };
+  }
+  return requireApiKey(request);
+}
+
 export function securityHeaders(response: NextResponse): NextResponse {
   response.headers.set("X-Content-Type-Options", "nosniff");
   response.headers.set("X-Frame-Options", "DENY");
@@ -96,6 +106,28 @@ export function withApiSecurity<T = unknown>(
     const apiKey = requireApiKey(request);
     if (!apiKey.ok && apiKey.response) {
       return apiKey.response;
+    }
+
+    const response = await handler(request, context);
+    if (response instanceof NextResponse) {
+      return securityHeaders(response);
+    }
+    return response;
+  };
+}
+
+// For public ingest endpoints (e.g. first-party telemetry) that browsers call
+// without credentials. Rate-limited and header-hardened, but no API key.
+export function withPublicApiSecurity<T = unknown>(
+  handler: (req: NextRequest, context: T) => Promise<Response | NextResponse>
+): (req: NextRequest, context: T) => Promise<Response | NextResponse> {
+  return async (request: NextRequest, context: T) => {
+    const clientId = getClientId(request);
+    const limit = await checkRateLimitAsync(clientId);
+    if (!limit.ok) {
+      const res = NextResponse.json({ error: "Rate limit exceeded" }, { status: 429 });
+      res.headers.set("Retry-After", String(limit.retryAfter));
+      return res;
     }
 
     const response = await handler(request, context);

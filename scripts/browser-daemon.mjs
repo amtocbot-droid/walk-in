@@ -20,6 +20,10 @@ console.log('daemon ready');
 process.on('SIGTERM', async () => { await browser.close(); process.exit(0); });
 process.on('SIGINT', async () => { await browser.close(); process.exit(0); });
 
+// Action-registered listeners (e.g. dialog handlers) must not kill the daemon.
+process.on('unhandledRejection', (err) => console.error('unhandledRejection:', err));
+process.on('uncaughtException', (err) => console.error('uncaughtException:', err));
+
 while (true) {
   let files = [];
   try {
