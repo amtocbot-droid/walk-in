@@ -155,19 +155,22 @@ Use `docker-compose.prod.yml` to mirror these settings locally:
 docker compose -f docker-compose.prod.yml up --build
 ```
 
-### EC2 via GitHub Actions
+### EC2 via GitHub Actions (live)
 
-The workflow in `.github/workflows/deploy.yml` runs tests, builds a Docker image, scans it with Trivy, pushes it to Docker Hub, and deploys to EC2 over SSH with hardened runtime flags.
+The app is deployed at **http://34.239.73.154:3000** by `.github/workflows/deploy-ec2.yml`. On every push to `main` it:
+
+1. **test** — `npm ci`, typecheck, lint, build.
+2. **build-and-push** — builds the `runner` and `migrator` images and pushes them to Amazon ECR (`walk-in`, `walk-in-migrator`).
+3. **deploy** — copies `docker-compose.ec2.yml` to the EC2 host (`seolith-apps`, Ubuntu, user `ubuntu`) over SSH, logs into ECR via the instance role, and runs `docker compose pull && up -d`.
 
 Required GitHub secrets:
 
-- `DOCKER_USERNAME` / `DOCKER_PASSWORD` — Docker Hub credentials.
-- `EC2_HOST` / `EC2_USERNAME` / `EC2_SSH_KEY` / `EC2_PORT` — EC2 connection details.
-- `AUTH_SECRET` — Auth.js session secret.
-- `NEXT_PUBLIC_APP_URL` — public URL of the deployment.
-- Optional: `OPENAI_API_KEY`, `TELEMETRY_PROVIDER`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`.
+- `AWS_ACCESS_KEY_ID` / `AWS_SECRET_ACCESS_KEY` — IAM user `walk-in-ci` (ECR push).
+- `ECR_REGISTRY` — e.g. `137451611488.dkr.ecr.us-east-1.amazonaws.com`.
+- `EC2_HOST` — `34.239.73.154`.
+- `EC2_SSH_KEY` — private key of the `walk-in-ci` EC2 key pair.
 
-On the EC2 instance, ensure Docker is installed and the SSH user can run `docker` commands. The app listens on port 3000 behind your reverse proxy (Nginx, ALB, etc.).
+Runtime configuration lives in `/opt/walk-in/.env` on the host (`AUTH_SECRET`, `NEXT_PUBLIC_APP_URL`, `POSTGRES_PASSWORD`, optional `OPENAI_API_KEY`, `STRIPE_*`); the compose file picks it up automatically. The stack (app + Postgres + Redis) runs alongside other apps on the shared host and listens on port 3000.
 
 ## License
 
