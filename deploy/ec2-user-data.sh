@@ -7,7 +7,7 @@ dnf update -y
 dnf install -y docker awscli
 
 systemctl enable --now docker
-usermod -aG docker ec2-user
+usermod -aG docker ubuntu
 
 # Docker Compose plugin
 mkdir -p /usr/local/lib/docker/cli-plugins
@@ -17,6 +17,6 @@ chmod +x /usr/local/lib/docker/cli-plugins/docker-compose
 
 # App directory — docker-compose.ec2.yml and .env land here (via CI/scp)
 mkdir -p /opt/walk-in
-chown ec2-user:ec2-user /opt/walk-in
+chown ubuntu:ubuntu /opt/walk-in
 
 echo "Walk In host ready. Deploy with: docker compose -f /opt/walk-in/docker-compose.ec2.yml up -d"

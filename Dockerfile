@@ -17,6 +17,10 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
+# The gitignored data/ dir is absent in CI checkouts; create it so the
+# runner stage's `COPY /app/data` always has a source.
+RUN mkdir -p /app/data
+
 ENV NEXT_TELEMETRY_DISABLED=1
 
 RUN npm run build
