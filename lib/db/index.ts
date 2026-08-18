@@ -78,15 +78,20 @@ export async function createStore(input: { id?: string; ownerId: string; ownerEm
     },
     update: {},
   });
-  const store = await prisma.store.create({
-    data: {
-      ...(input.id ? { id: input.id } : {}),
-      ownerId: input.ownerId,
-      name: input.name,
-      plan: "free",
-    },
-    include: { apiKeys: true },
-  });
+  // A client-supplied id makes creation idempotent: a duplicate POST returns
+  // the existing store unchanged instead of tripping the unique constraint.
+  // Ownership conflicts are checked by the caller.
+  const store = input.id
+    ? await prisma.store.upsert({
+        where: { id: input.id },
+        create: { id: input.id, ownerId: input.ownerId, name: input.name, plan: "free" },
+        update: {},
+        include: { apiKeys: true },
+      })
+    : await prisma.store.create({
+        data: { ownerId: input.ownerId, name: input.name, plan: "free" },
+        include: { apiKeys: true },
+      });
   return toStoredStore(store);
 }
 
