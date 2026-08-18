@@ -19,6 +19,13 @@ services:
       - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET:-}
     volumes:
       - walkin-data:/app/data
+    networks:
+      default: {}
+      # Shared edge network so the host's Caddy can reverse-proxy
+      # https://walkin.seolith.com to this service.
+      seolith-apps_default:
+        aliases:
+          - walkin-app
     depends_on:
       migrate:
         condition: service_completed_successfully
@@ -63,3 +70,7 @@ volumes:
   walkin-data:
   postgres-data:
   redis-data:
+
+networks:
+  seolith-apps_default:
+    external: true
