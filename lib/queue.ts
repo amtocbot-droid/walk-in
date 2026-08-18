@@ -1,5 +1,3 @@
-import { getRedis } from "@/lib/redis";
-
 const PHOTOGRAMMETRY_QUEUE = "photogrammetry";
 
 export interface PhotogrammetryJobData {
@@ -28,8 +26,32 @@ async function getBullMq() {
   }
 }
 
+// BullMQ requires maxRetriesPerRequest: null, which the shared cache client
+// in lib/redis.ts does not use — give BullMQ its own dedicated connection.
+const IOREDIS_SPECIFIER = "io" + "redis";
+let bullMqConnection: import("ioredis").Redis | null | undefined;
+
+async function getBullMqConnection(): Promise<import("ioredis").Redis | null> {
+  const url = process.env.REDIS_URL;
+  if (!url || !isNodeRuntime()) return null;
+
+  if (bullMqConnection === undefined) {
+    try {
+      const { default: IORedis } = await import(IOREDIS_SPECIFIER);
+      bullMqConnection = new IORedis(url, {
+        maxRetriesPerRequest: null,
+        enableReadyCheck: false,
+      });
+    } catch {
+      bullMqConnection = null;
+    }
+  }
+
+  return bullMqConnection ?? null;
+}
+
 export async function getPhotogrammetryQueue(): Promise<import("bullmq").Queue | null> {
-  const redis = getRedis();
+  const redis = await getBullMqConnection();
   if (!redis) return null;
 
   const bullmq = await getBullMq();
@@ -52,7 +74,7 @@ export async function enqueuePhotogrammetryJob(data: PhotogrammetryJobData): Pro
 export async function createPhotogrammetryWorker(
   processor: (job: import("bullmq").Job<PhotogrammetryJobData>) => Promise<void>
 ): Promise<import("bullmq").Worker | null> {
-  const redis = getRedis();
+  const redis = await getBullMqConnection();
   if (!redis) return null;
 
   const bullmq = await getBullMq();
