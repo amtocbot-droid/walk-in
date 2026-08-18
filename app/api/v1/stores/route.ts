@@ -46,5 +46,8 @@ export async function POST(request: NextRequest) {
   // Accept a client-supplied id so the owner dashboard's local store id
   // matches the server row and subsequent scene/product syncs resolve.
   const store = await createStore({ id: body.id, ownerId: body.ownerId, ownerEmail: body.ownerEmail, name: body.name });
+  if (store.ownerId !== body.ownerId) {
+    return NextResponse.json({ error: "A store with this id already exists" }, { status: 409 });
+  }
   return securityHeaders(NextResponse.json({ store }));
 }
