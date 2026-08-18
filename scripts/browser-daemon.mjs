@@ -52,7 +52,16 @@ async function main() {
       }
     }
     if (!page || page.isClosed()) {
-      page = context.pages()[0] ?? await context.newPage();
+      try {
+        page = context.pages()[0] ?? await context.newPage();
+      } catch (err) {
+        // Context died without a clean 'close' event — force a relaunch.
+        console.error('page recovery failed:', err);
+        try { await context.close(); } catch { /* already gone */ }
+        context = null; page = null;
+        await new Promise(r => setTimeout(r, 2000));
+        continue;
+      }
     }
 
     let files = [];
